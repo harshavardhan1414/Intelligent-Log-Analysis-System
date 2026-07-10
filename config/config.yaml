@@ -1,0 +1,9 @@
+data_ingestion:
+
+  dataset_path: data/raw/HDFS.log
+
+  artifact_dir: artifacts
+
+  raw_data_dir: artifacts/raw_data
+
+  processed_data_dir: artifacts/processed_data
