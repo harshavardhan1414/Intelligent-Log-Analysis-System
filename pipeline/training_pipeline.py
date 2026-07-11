@@ -4,6 +4,8 @@ from src.components.data_validation import DataValidation
 from src.components.data_transformation import DataTransformation
 from src.components.data_preprocessing import DataPreprocessing
 from src.components.feature_engineering import FeatureEngineering
+from src.components.model_trainer import ModelTrainer
+from src.components.model_evaluation import ModelEvaluation
 
 from src.utils.logger import logger
 from src.utils.exception import CustomException
@@ -63,6 +65,27 @@ class TrainingPipeline:
 
             logger.info(
     f"Vectorizer File : {vectorizer_path}"
+)
+            trainer = ModelTrainer(
+    feature_path
+)
+
+            model_path = trainer.initiate_model_training()
+
+            logger.info(
+    f"Model Saved At : {model_path}"
+)
+            evaluation = ModelEvaluation(
+    model_path,
+    feature_path
+)
+
+            prediction_file = (
+    evaluation.initiate_model_evaluation()
+)
+
+            logger.info(
+    f"Prediction File Saved At : {prediction_file}"
 )
 
             logger.info("Training Pipeline Completed")
