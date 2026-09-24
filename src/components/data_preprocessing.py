@@ -1,5 +1,8 @@
 import os
+import re
 import sys
+
+import pandas as pd
 
 from src.utils.logger import logger
 from src.utils.exception import CustomException
@@ -7,22 +10,96 @@ from src.utils.exception import CustomException
 
 class DataPreprocessing:
 
-    def __init__(self, data_ingestion_artifact):
+    def __init__(self, transformed_file):
 
-        self.data_ingestion_artifact = data_ingestion_artifact
+        self.transformed_file = transformed_file
 
-    def initiate_data_preprocessing(self):
+    def initiate_data_preprocessing(self) -> str:
+
+        logger.info("Data Preprocessing Started")
 
         try:
 
-            logger.info("Data Preprocessing Started")
+            
+            df = pd.read_csv(
+                self.transformed_file
+            )
 
-            input_file = self.data_ingestion_artifact.raw_file_path
+            logger.info(
+                f"Input records: {len(df)}"
+            )
 
+            
+            required_columns = [
+                "timestamp",
+                "logger_name",
+                "level",
+                "message"
+            ]
+
+            missing_columns = [
+                column
+                for column in required_columns
+                if column not in df.columns
+            ]
+
+            if missing_columns:
+
+                raise ValueError(
+                    f"Missing required columns: "
+                    f"{missing_columns}"
+                )
+
+           
+            df = df.dropna(
+                subset=["message"]
+            ).copy()
+
+            
+            df["message"] = (
+                df["message"]
+                .astype(str)
+                .str.strip()
+            )
+
+            
+            df = df[
+                df["message"] != ""
+            ].copy()
+
+         
+            df["cleaned_message"] = (
+                df["message"]
+                .str.lower()
+                .str.replace(
+                    r"\s+",
+                    " ",
+                    regex=True
+                )
+                .str.strip()
+            )
+
+            
+            df["cleaned_message"] = (
+                df["cleaned_message"]
+                .str.replace(
+                    r"[^\w\s]",
+                    " ",
+                    regex=True
+                )
+                .str.replace(
+                    r"\s+",
+                    " ",
+                    regex=True
+                )
+                .str.strip()
+            )
+
+           
             output_file = os.path.join(
                 "artifacts",
                 "processed_data",
-                "cleaned_logs.txt"
+                "preprocessed_logs.csv"
             )
 
             os.makedirs(
@@ -30,54 +107,30 @@ class DataPreprocessing:
                 exist_ok=True
             )
 
-            unique_logs = set()
-
-            total_lines = 0
-
-            cleaned_lines = 0
-
-            with open(
-                input_file,
-                "r",
-                encoding="utf-8",
-                errors="ignore"
-            ) as infile, open(
+            df.to_csv(
                 output_file,
-                "w",
-                encoding="utf-8"
-            ) as outfile:
+                index=False
+            )
 
-                for line in infile:
+            logger.info(
+                f"Output records: {len(df)}"
+            )
 
-                    total_lines += 1
+            logger.info(
+                f"Preprocessed dataset saved to: "
+                f"{output_file}"
+            )
 
-                    line = line.strip()
-
-                    if line == "":
-                        continue
-
-                    if line not in unique_logs:
-
-                        unique_logs.add(line)
-
-                        outfile.write(line + "\n")
-
-                        cleaned_lines += 1
-
-                    if total_lines % 100000 == 0:
-
-                        logger.info(
-                            f"{total_lines} lines processed..."
-                        )
-
-            logger.info(f"Total Lines : {total_lines}")
-
-            logger.info(f"Cleaned Lines : {cleaned_lines}")
-
-            logger.info("Data Preprocessing Completed Successfully")
+            logger.info(
+                "Data Preprocessing Completed Successfully"
+            )
 
             return output_file
 
         except Exception as e:
+
+            logger.error(
+                "Exception occurred during Data Preprocessing"
+            )
 
             raise CustomException(e, sys)

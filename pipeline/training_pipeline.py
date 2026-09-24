@@ -1,97 +1,119 @@
-from src.configuration.configuration import ConfigurationManager
-from src.components.data_ingestion import DataIngestion
-from src.components.data_validation import DataValidation
-from src.components.data_transformation import DataTransformation
-from src.components.data_preprocessing import DataPreprocessing
-from src.components.feature_engineering import FeatureEngineering
-from src.components.model_trainer import ModelTrainer
-from src.components.model_evaluation import ModelEvaluation
+def start_training_pipeline(self):
 
-from src.utils.logger import logger
-from src.utils.exception import CustomException
+    try:
 
-import sys
+        logger.info("Training Pipeline Started")
 
+       
+        config = ConfigurationManager()
 
-class TrainingPipeline:
+        data_ingestion_config = (
+            config.get_data_ingestion_config()
+        )
 
-    def __init__(self):
-        pass
+        
+        data_ingestion = DataIngestion(
+            data_ingestion_config
+        )
 
-    def start_training_pipeline(self):
+        ingestion_artifact = (
+            data_ingestion.initiate_data_ingestion()
+        )
 
-        try:
+       
+        validator = DataValidation(
+            ingestion_artifact
+        )
 
-            logger.info("Training Pipeline Started")
-
-            config = ConfigurationManager()
-
-            data_ingestion_config = config.get_data_ingestion_config()
-
-            data_ingestion = DataIngestion(data_ingestion_config)
-
-            ingestion_artifact = data_ingestion.initiate_data_ingestion()
-
-            validator = DataValidation(ingestion_artifact)
-
+        validation_status = (
             validator.initiate_data_validation()
-            transform = DataTransformation(ingestion_artifact)
+        )
 
-            processed_path = transform.initiate_data_transformation()
+        if not validation_status:
 
-            logger.info(f"Processed File Saved At : {processed_path}")
-            preprocessing = DataPreprocessing(
-                ingestion_artifact
+            raise ValueError(
+                "Data validation failed"
             )
 
-            cleaned_file = (
-                preprocessing.initiate_data_preprocessing()
-            )
+        
+        transformation = DataTransformation(
+            ingestion_artifact
+        )
 
-            logger.info(
-                f"Cleaned File Saved At : {cleaned_file}"
-            )
-            feature_engineering = FeatureEngineering(
-    cleaned_file
-)
+        transformed_file = (
+            transformation.initiate_data_transformation()
+        )
 
-            feature_path, vectorizer_path = (
-    feature_engineering.initiate_feature_engineering()
-)
+        logger.info(
+            f"Transformed file: {transformed_file}"
+        )
 
-            logger.info(
-    f"Feature File : {feature_path}"
-)
+        
+        preprocessing = DataPreprocessing(
+            transformed_file
+        )
 
-            logger.info(
-    f"Vectorizer File : {vectorizer_path}"
-)
-            trainer = ModelTrainer(
-    feature_path
-)
+        preprocessed_file = (
+            preprocessing.initiate_data_preprocessing()
+        )
 
-            model_path = trainer.initiate_model_training()
+        logger.info(
+            f"Preprocessed file: {preprocessed_file}"
+        )
 
-            logger.info(
-    f"Model Saved At : {model_path}"
-)
-            evaluation = ModelEvaluation(
-    model_path,
-    feature_path
-)
+       
+        feature_engineering = FeatureEngineering(
+            preprocessed_file
+        )
 
-            prediction_file = (
-    evaluation.initiate_model_evaluation()
-)
+        feature_path, vectorizer_path = (
+            feature_engineering
+            .initiate_feature_engineering()
+        )
 
-            logger.info(
-    f"Prediction File Saved At : {prediction_file}"
-)
+        logger.info(
+            f"Feature file: {feature_path}"
+        )
 
-            logger.info("Training Pipeline Completed")
+        logger.info(
+            f"Vectorizer file: {vectorizer_path}"
+        )
 
-            return ingestion_artifact
+       
+        trainer = ModelTrainer(
+            feature_path
+        )
 
-        except Exception as e:
+        model_path = (
+            trainer.initiate_model_training()
+        )
 
-            raise CustomException(e, sys)
+        logger.info(
+            f"Model saved at: {model_path}"
+        )
+
+       
+        evaluation = ModelEvaluation(
+            model_path,
+            feature_path,
+            preprocessed_file
+        )
+
+        prediction_file = (
+            evaluation.initiate_model_evaluation()
+        )
+
+        logger.info(
+            f"Prediction file: {prediction_file}"
+        )
+
+       
+        logger.info(
+            "Training Pipeline Completed"
+        )
+
+        return ingestion_artifact
+
+    except Exception as e:
+
+        raise CustomException(e, sys)

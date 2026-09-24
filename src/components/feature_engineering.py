@@ -1,6 +1,8 @@
 import os
 import sys
+
 import joblib
+import pandas as pd
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -10,61 +12,104 @@ from src.utils.exception import CustomException
 
 class FeatureEngineering:
 
-    def __init__(self, cleaned_file):
+    def __init__(self, preprocessed_file):
 
-        self.cleaned_file = cleaned_file
+        self.preprocessed_file = preprocessed_file
 
     def initiate_feature_engineering(self):
 
+        logger.info("Feature Engineering Started")
+
         try:
 
-            logger.info("Feature Engineering Started")
+           
+            df = pd.read_csv(
+                self.preprocessed_file
+            )
 
-            with open(
-                self.cleaned_file,
-                "r",
-                encoding="utf-8"
-            ) as file:
+            
+            if "cleaned_message" not in df.columns:
 
-                logs = file.readlines()
+                raise ValueError(
+                    "cleaned_message column not found"
+                )
 
-            logs = [line.strip() for line in logs]
+           
+            logs = (
+                df["cleaned_message"]
+                .fillna("")
+                .astype(str)
+                .tolist()
+            )
 
+            
             vectorizer = TfidfVectorizer(
                 max_features=500
             )
 
-            features = vectorizer.fit_transform(logs)
+           
+            features = vectorizer.fit_transform(
+                logs
+            )
 
+           
             os.makedirs(
                 "artifacts/features",
                 exist_ok=True
             )
 
+            
             feature_path = os.path.join(
-                "artifacts/features",
+                "artifacts",
+                "features",
                 "features.pkl"
             )
 
+           
             vectorizer_path = os.path.join(
-                "artifacts/features",
+                "artifacts",
+                "features",
                 "vectorizer.pkl"
             )
 
+          
             joblib.dump(
                 features,
                 feature_path
             )
+
+           
 
             joblib.dump(
                 vectorizer,
                 vectorizer_path
             )
 
-            logger.info("Feature Engineering Completed")
+            logger.info(
+                f"Feature matrix shape: {features.shape}"
+            )
 
-            return feature_path, vectorizer_path
+            logger.info(
+                f"Features saved to: {feature_path}"
+            )
+
+            logger.info(
+                f"Vectorizer saved to: {vectorizer_path}"
+            )
+
+            logger.info(
+                "Feature Engineering Completed Successfully"
+            )
+
+            return (
+                feature_path,
+                vectorizer_path
+            )
 
         except Exception as e:
+
+            logger.error(
+                "Exception occurred during Feature Engineering"
+            )
 
             raise CustomException(e, sys)
